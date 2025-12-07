@@ -11,7 +11,7 @@ exports.getAllReservations = async (req, res) => {
         });
     } catch (error) {
         console.error('Get reservations error:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 };
 
@@ -24,7 +24,7 @@ exports.getMyReservations = async (req, res) => {
         });
     } catch (error) {
         console.error('Get my reservations error:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 };
 
@@ -34,12 +34,11 @@ exports.getReservationById = async (req, res) => {
         const reservation = await Reservation.findById(id);
         
         if (!reservation) {
-            return res.status(404).json({ message: 'Réservation non trouvée' });
+            return res.status(404).json({ success: false, message: 'Réservation non trouvée' });
         }
         
-        // Vérifier l'accès
         if (req.userRole !== 'admin' && req.userRole !== 'manager' && reservation.user_id !== req.userId) {
-            return res.status(403).json({ message: 'Accès non autorisé' });
+            return res.status(403).json({ success: false, message: 'Accès non autorisé' });
         }
         
         res.json({
@@ -49,40 +48,90 @@ exports.getReservationById = async (req, res) => {
         
     } catch (error) {
         console.error('Get reservation error:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 };
 
 exports.createReservation = async (req, res) => {
     try {
-        const { resource_id, event_id, start_date, end_date, notes } = req.body;
+        const { resource_id, start_date, end_date, notes, event_id } = req.body;
         
+        // Validation des données
+        if (!resource_id || !start_date || !end_date) {
+            return res.status(400).json({ 
+                message: 'Les champs ressource, date de début et date de fin sont obligatoires' 
+            });
+        }
+
         // Vérifier la disponibilité de la ressource
         const resource = await Resource.findById(resource_id);
-        if (!resource || resource.status !== 'available') {
-            return res.status(400).json({ message: 'Ressource non disponible' });
+        if (!resource) {
+            return res.status(404).json({ message: 'Ressource non trouvée' });
         }
         
+        if (resource.status !== 'available') {
+            return res.status(400).json({ message: 'Ressource non disponible' });
+        }
+
+        // Vérifier si la ressource est déjà réservée pour cette période
+        const existingReservations = await Reservation.findByResource(resource_id);
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+        
+        const hasConflict = existingReservations.some(reservation => {
+            if (reservation.status !== 'confirmed') return false;
+            
+            const resStart = new Date(reservation.start_date);
+            const resEnd = new Date(reservation.end_date);
+            
+            return (startDate < resEnd && endDate > resStart);
+        });
+
+        if (hasConflict) {
+            return res.status(400).json({ 
+                message: 'La ressource est déjà réservée pour cette période' 
+            });
+        }
+
+        // Créer la réservation
         const reservationId = await Reservation.create({
             user_id: req.userId,
             resource_id,
             event_id: event_id || null,
-            start_date,
-            end_date,
+            start_date: startDate,
+            end_date: endDate,
             status: 'pending',
-            notes
+            notes: notes || ''
         });
+
+        // Récupérer les informations pour la notification
+        const user = await User.findById(req.userId);
         
         // Créer une notification pour les managers
-        const notification = await Notification.create({
-            user_id: req.userRole === 'manager' ? req.userId : 2, // ID du manager par défaut
-            title: 'Nouvelle réservation',
-            message: `Une nouvelle réservation a été effectuée pour ${resource.name}`,
+        const managers = await User.findAll();
+        const managerUsers = managers.filter(m => m.role === 'manager');
+        
+        for (const manager of managerUsers) {
+            await Notification.create({
+                user_id: manager.id,
+                title: 'Nouvelle réservation',
+                message: `${user.name} a effectué une nouvelle réservation pour ${resource.name}`,
+                type: 'info',
+                related_type: 'reservation',
+                related_id: reservationId
+            });
+        }
+
+        // Notification pour l'utilisateur
+        await Notification.create({
+            user_id: req.userId,
+            title: 'Réservation enregistrée',
+            message: `Votre réservation pour ${resource.name} a été enregistrée et est en attente de confirmation`,
             type: 'info',
             related_type: 'reservation',
             related_id: reservationId
         });
-        
+
         res.json({
             success: true,
             message: 'Réservation créée avec succès. En attente de confirmation.',
@@ -91,10 +140,9 @@ exports.createReservation = async (req, res) => {
         
     } catch (error) {
         console.error('Create reservation error:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ message: 'Erreur serveur lors de la création de la réservation' });
     }
 };
-
 exports.updateReservationStatus = async (req, res) => {
     try {
         const { id } = req.params;
@@ -102,47 +150,55 @@ exports.updateReservationStatus = async (req, res) => {
         
         const validStatuses = ['confirmed', 'rejected', 'cancelled'];
         if (!validStatuses.includes(status)) {
-            return res.status(400).json({ message: 'Statut invalide' });
+            return res.status(400).json({ success: false, message: 'Statut invalide' });
         }
         
+        const reservation = await Reservation.findById(id);
+        if (!reservation) {
+            return res.status(404).json({ success: false, message: 'Réservation non trouvée' });
+        }
+
         await Reservation.update(id, { status });
         
-        // Récupérer la réservation pour créer une notification
-        const reservation = await Reservation.findById(id);
-        if (reservation) {
-            await Notification.create({
-                user_id: reservation.user_id,
-                title: 'Statut de réservation mis à jour',
-                message: `Votre réservation #${id} a été ${status}`,
-                type: status === 'confirmed' ? 'success' : 'warning',
-                related_type: 'reservation',
-                related_id: id
-            });
-        }
+        // Notifier l'utilisateur
+        const statusMsg = {
+            confirmed: 'confirmée',
+            rejected: 'rejetée',
+            cancelled: 'annulée'
+        };
+
+        await Notification.create({
+            user_id: reservation.user_id,
+            title: 'Réservation ' + statusMsg[status],
+            message: `Votre réservation #${id} a été ${statusMsg[status]}`,
+            type: status === 'confirmed' ? 'success' : 'warning',
+            related_type: 'reservation',
+            related_id: id
+        });
         
         res.json({
             success: true,
-            message: `Réservation ${status} avec succès`
+            message: `Réservation ${statusMsg[status]} avec succès`
         });
         
     } catch (error) {
         console.error('Update reservation status error:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 };
 
 exports.cancelReservation = async (req, res) => {
     try {
         const { id } = req.params;
+        const userId = req.userId;
         
         const reservation = await Reservation.findById(id);
         if (!reservation) {
-            return res.status(404).json({ message: 'Réservation non trouvée' });
+            return res.status(404).json({ success: false, message: 'Réservation non trouvée' });
         }
         
-        // Vérifier que l'utilisateur peut annuler cette réservation
-        if (req.userRole !== 'admin' && req.userRole !== 'manager' && reservation.user_id !== req.userId) {
-            return res.status(403).json({ message: 'Non autorisé' });
+        if (req.userRole !== 'admin' && req.userRole !== 'manager' && reservation.user_id !== userId) {
+            return res.status(403).json({ success: false, message: 'Non autorisé' });
         }
         
         await Reservation.update(id, { status: 'cancelled' });
@@ -154,7 +210,7 @@ exports.cancelReservation = async (req, res) => {
         
     } catch (error) {
         console.error('Cancel reservation error:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 };
 
@@ -167,6 +223,6 @@ exports.getPendingReservations = async (req, res) => {
         });
     } catch (error) {
         console.error('Get pending reservations error:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
 };

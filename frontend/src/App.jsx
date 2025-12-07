@@ -5,6 +5,10 @@ import AdminLayout from './layouts/AdminLayout';
 import ManagerLayout from './layouts/ManagerLayout';
 import ClientLayout from './layouts/ClientLayout';
 
+import NewReservation from './pages/client/NewReservation';
+import ResourceDetails from './pages/client/ResourceDetails';
+
+
 // Pages publiques
 import Home from './pages/public/Home';
 import About from './pages/public/About';
@@ -68,6 +72,9 @@ function App() {
             <Route path="catalog" element={<ClientCatalog />} />
             <Route path="reservations" element={<ClientReservations />} />
             <Route path="profile" element={<ClientProfile />} />
+            <Route path="catalog/:id" element={<ResourceDetails />} />
+            <Route path="reservations/new" element={<NewReservation />} />
+            <Route path="reservations/new/:id" element={<NewReservation />} />
           </Route>
 
           {/* Redirections par défaut */}
