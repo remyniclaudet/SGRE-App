@@ -5,6 +5,7 @@
 
 const userModel = require('../models/userModel');
 const auditModel = require('../models/auditModel');
+const bcrypt = require('bcrypt'); // si pas déjà importé
 
 /**
  * Inscription d'un nouvel utilisateur
