@@ -1,235 +1,168 @@
-/**
- * Contrôleur de gestion des ressources
- */
+const Resource = require('../models/Resource');
 
-const resourceModel = require('../models/resourceModel');
-const auditModel = require('../models/auditModel');
-
-/**
- * Récupérer toutes les ressources
- */
 exports.getAllResources = async (req, res) => {
-  try {
-    const { available_from, available_to, status, type } = req.query;
-    
-    const resources = await resourceModel.getAllResources({
-      available_from,
-      available_to,
-      status,
-      type
-    });
-
-    res.json({
-      success: true,
-      count: resources.length,
-      resources
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération des ressources:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
+    try {
+        const resources = await Resource.findAll();
+        res.json({
+            success: true,
+            resources
+        });
+    } catch (error) {
+        console.error('Get resources error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
 };
 
-/**
- * Récupérer une ressource par ID
- */
+exports.getPublicResources = async (req, res) => {
+    try {
+        const resources = await Resource.findAll();
+        // Filtrer pour ne montrer que les ressources disponibles
+        const publicResources = resources.filter(r => r.status === 'available');
+        res.json({
+            success: true,
+            resources: publicResources
+        });
+    } catch (error) {
+        console.error('Get public resources error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
+};
+
 exports.getResourceById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const resource = await resourceModel.getResourceById(id);
-
-    if (!resource) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ressource non trouvée'
-      });
+    try {
+        const { id } = req.params;
+        const resource = await Resource.findById(id);
+        
+        if (!resource) {
+            return res.status(404).json({ message: 'Ressource non trouvée' });
+        }
+        
+        res.json({
+            success: true,
+            resource
+        });
+        
+    } catch (error) {
+        console.error('Get resource error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    res.json({
-      success: true,
-      resource
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération de la ressource:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
 };
 
-/**
- * Créer une nouvelle ressource
- */
+exports.getPublicResourceById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const resource = await Resource.findById(id);
+        
+        if (!resource || resource.status !== 'available') {
+            return res.status(404).json({ message: 'Ressource non trouvée' });
+        }
+        
+        res.json({
+            success: true,
+            resource
+        });
+        
+    } catch (error) {
+        console.error('Get public resource error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
+};
+
 exports.createResource = async (req, res) => {
-  try {
-    const {
-      name,
-      type,
-      capacity,
-      location,
-      status,
-      attributes
-    } = req.body;
-
-    // Validation
-    if (!name || !type || !location) {
-      return res.status(400).json({
-        success: false,
-        message: 'Nom, type et location sont requis'
-      });
+    try {
+        const { name, type, category_id, status, description, capacity, location } = req.body;
+        
+        const resourceId = await Resource.create({
+            name,
+            type,
+            category_id,
+            status: status || 'available',
+            description,
+            capacity,
+            location,
+            created_by: req.userId
+        });
+        
+        res.json({
+            success: true,
+            message: 'Ressource créée avec succès',
+            resourceId
+        });
+        
+    } catch (error) {
+        console.error('Create resource error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    const resourceData = {
-      name,
-      type,
-      capacity: capacity || 1,
-      location,
-      status: status || 'AVAILABLE',
-      attributes: attributes ? JSON.parse(attributes) : null
-    };
-
-    const resourceId = await resourceModel.createResource(resourceData);
-
-    // Log d'audit
-    await auditModel.logAction({
-      user_id: req.user.id,
-      action: 'CREATE_RESOURCE',
-      object_type: 'RESOURCE',
-      object_id: resourceId,
-      detail: resourceData
-    });
-
-    const resource = await resourceModel.getResourceById(resourceId);
-
-    res.status(201).json({
-      success: true,
-      message: 'Ressource créée avec succès',
-      resource
-    });
-  } catch (error) {
-    console.error('Erreur lors de la création de la ressource:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
 };
 
-/**
- * Mettre à jour une ressource
- */
 exports.updateResource = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    // Vérifier si la ressource existe
-    const existingResource = await resourceModel.getResourceById(id);
-    if (!existingResource) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ressource non trouvée'
-      });
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+        
+        await Resource.update(id, updates);
+        
+        res.json({
+            success: true,
+            message: 'Ressource mise à jour avec succès'
+        });
+        
+    } catch (error) {
+        console.error('Update resource error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    await resourceModel.updateResource(id, updateData);
-
-    // Log d'audit
-    await auditModel.logAction({
-      user_id: req.user.id,
-      action: 'UPDATE_RESOURCE',
-      object_type: 'RESOURCE',
-      object_id: id,
-      detail: updateData
-    });
-
-    const updatedResource = await resourceModel.getResourceById(id);
-
-    res.json({
-      success: true,
-      message: 'Ressource mise à jour avec succès',
-      resource: updatedResource
-    });
-  } catch (error) {
-    console.error('Erreur lors de la mise à jour de la ressource:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
 };
 
-/**
- * Supprimer une ressource
- */
 exports.deleteResource = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Vérifier si la ressource existe
-    const resource = await resourceModel.getResourceById(id);
-    if (!resource) {
-      return res.status(404).json({
-        success: false,
-        message: 'Ressource non trouvée'
-      });
+    try {
+        const { id } = req.params;
+        
+        await Resource.delete(id);
+        
+        res.json({
+            success: true,
+            message: 'Ressource supprimée avec succès'
+        });
+        
+    } catch (error) {
+        console.error('Delete resource error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    await resourceModel.deleteResource(id);
-
-    // Log d'audit
-    await auditModel.logAction({
-      user_id: req.user.id,
-      action: 'DELETE_RESOURCE',
-      object_type: 'RESOURCE',
-      object_id: id,
-      detail: { name: resource.name }
-    });
-
-    res.json({
-      success: true,
-      message: 'Ressource supprimée avec succès'
-    });
-  } catch (error) {
-    console.error('Erreur lors de la suppression de la ressource:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
 };
 
-/**
- * Vérifier la disponibilité d'une ressource
- */
-exports.checkAvailability = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { start_at, end_at } = req.query;
-
-    if (!start_at || !end_at) {
-      return res.status(400).json({
-        success: false,
-        message: 'start_at et end_at sont requis'
-      });
+exports.getAvailableResources = async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        
+        if (!start_date || !end_date) {
+            const resources = await Resource.findAll();
+            return res.json({
+                success: true,
+                resources: resources.filter(r => r.status === 'available')
+            });
+        }
+        
+        const resources = await Resource.getAvailable(start_date, end_date);
+        res.json({
+            success: true,
+            resources
+        });
+        
+    } catch (error) {
+        console.error('Get available resources error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
+};
 
-    const isAvailable = await resourceModel.checkAvailability(id, start_at, end_at);
-
-    res.json({
-      success: true,
-      available: isAvailable,
-      message: isAvailable ? 'Ressource disponible' : 'Ressource non disponible pour ce créneau'
-    });
-  } catch (error) {
-    console.error('Erreur lors de la vérification de disponibilité:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
+exports.getResourceStats = async (req, res) => {
+    try {
+        const stats = await Resource.getStats();
+        res.json({
+            success: true,
+            stats
+        });
+    } catch (error) {
+        console.error('Get resource stats error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
 };

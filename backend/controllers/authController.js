@@ -1,182 +1,97 @@
-/**
- * Contrôleur d'authentification
- * Gère l'inscription, la connexion et la gestion de session
- */
+const User = require('../models/User');
 
-const userModel = require('../models/userModel');
-const auditModel = require('../models/auditModel');
-const bcrypt = require('bcrypt'); // si pas déjà importé
-
-/**
- * Inscription d'un nouvel utilisateur
- */
-exports.register = async (req, res) => {
-  try {
-    const { email, password, fullName } = req.body;
-
-    // Validation basique
-    if (!email || !password || !fullName) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email, mot de passe et nom complet sont requis'
-      });
-    }
-
-    // Vérifier si l'utilisateur existe déjà
-    const existingUser = await userModel.getUserByEmail(email);
-    if (existingUser) {
-      return res.status(409).json({
-        success: false,
-        message: 'Un utilisateur avec cet email existe déjà'
-      });
-    }
-
-    // Créer l'utilisateur (mot de passe en clair)
-    const userData = {
-      email,
-      password, // Stocké en clair (conformément à la demande)
-      full_name: fullName,
-      role: 'CLIENT', // Rôle par défaut
-      is_active: 1
-    };
-
-    const userId = await userModel.createUser(userData);
-
-    // Récupérer l'utilisateur créé
-    const user = await userModel.getUserById(userId);
-
-    // Log d'audit
-    await auditModel.logAction({
-      user_id: userId,
-      action: 'REGISTER',
-      object_type: 'USER',
-      object_id: userId,
-      detail: { email, role: 'CLIENT' }
-    });
-
-    res.status(201).json({
-      success: true,
-      message: 'Inscription réussie',
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        role: user.role,
-        isActive: user.is_active
-      }
-    });
-  } catch (error) {
-    console.error('Erreur lors de l\'inscription:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de l\'inscription'
-    });
-  }
-};
-
-/**
- * Connexion utilisateur
- */
 exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Validation
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email et mot de passe sont requis'
-      });
+    try {
+        const { email, password } = req.body;
+        
+        // Rechercher l'utilisateur par email
+        const user = await User.findByEmail(email);
+        
+        if (!user) {
+            return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+        }
+        
+        // Vérifier le mot de passe (sans hash pour la simplicité)
+        if (user.password !== password) {
+            return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+        }
+        
+        // Retourner les informations de l'utilisateur sans le mot de passe
+        const { password: _, ...userWithoutPassword } = user;
+        
+        res.json({
+            success: true,
+            user: userWithoutPassword
+        });
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    // Récupérer l'utilisateur
-    const user = await userModel.getUserByEmail(email);
-
-    // Vérifier si l'utilisateur existe
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email ou mot de passe incorrect'
-      });
-    }
-
-    // Vérifier si le compte est actif
-    if (!user.is_active) {
-      return res.status(403).json({
-        success: false,
-        message: 'Ce compte est désactivé'
-      });
-    }
-
-    // Vérifier le mot de passe (en clair)
-    if (user.password !== password) {
-      return res.status(401).json({
-        success: false,
-        message: 'Email ou mot de passe incorrect'
-      });
-    }
-
-    // Log d'audit
-    await auditModel.logAction({
-      user_id: user.id,
-      action: 'LOGIN',
-      object_type: 'USER',
-      object_id: user.id,
-      detail: { email }
-    });
-
-    // Retourner les informations utilisateur
-    res.json({
-      success: true,
-      message: 'Connexion réussie',
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        role: user.role,
-        isActive: user.is_active,
-        createdAt: user.created_at
-      }
-    });
-  } catch (error) {
-    console.error('Erreur lors de la connexion:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la connexion'
-    });
-  }
 };
 
-/**
- * Récupérer les informations de l'utilisateur courant
- */
-exports.getCurrentUser = async (req, res) => {
-  try {
-    const user = req.user;
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
+exports.register = async (req, res) => {
+    try {
+        const { name, email, password, role = 'client' } = req.body;
+        
+        // Vérifier si l'utilisateur existe déjà
+        const existingUser = await User.findByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({ message: 'Cet email est déjà utilisé' });
+        }
+        
+        // Créer l'utilisateur
+        const userId = await User.create({
+            name,
+            email,
+            password, // Stocker en clair pour la simplicité
+            role
+        });
+        
+        res.json({
+            success: true,
+            message: 'Compte créé avec succès',
+            userId
+        });
+        
+    } catch (error) {
+        console.error('Register error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
+};
 
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        role: user.role,
-        isActive: user.is_active,
-        createdAt: user.created_at
-      }
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération de l\'utilisateur:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
+exports.getProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        
+        if (!user) {
+            return res.status(404).json({ message: 'Utilisateur non trouvé' });
+        }
+        
+        res.json({
+            success: true,
+            user
+        });
+        
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
+};
+
+exports.updateProfile = async (req, res) => {
+    try {
+        const { name, email } = req.body;
+        
+        await User.update(req.userId, { name, email });
+        
+        res.json({
+            success: true,
+            message: 'Profil mis à jour avec succès'
+        });
+        
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
 };

@@ -1,25 +1,12 @@
-/**
- * Routes de gestion des notifications
- */
-
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../controllers/notificationController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { authenticate } = require('../middleware/auth');
 
-// Toutes les routes nécessitent une authentification
-router.use(authMiddleware.requireAuth);
-
-// Récupérer les notifications de l'utilisateur
-router.get('/', notificationController.getUserNotifications);
-
-// Marquer une notification comme lue
-router.patch('/:id/read', notificationController.markAsRead);
-
-// Marquer toutes les notifications comme lues
-router.patch('/read-all', notificationController.markAllAsRead);
-
-// Supprimer une notification
-router.delete('/:id', notificationController.deleteNotification);
+router.get('/', authenticate, notificationController.getNotifications);
+router.put('/:id/read', authenticate, notificationController.markAsRead);
+router.put('/read-all', authenticate, notificationController.markAllAsRead);
+router.get('/unread-count', authenticate, notificationController.getUnreadCount);
+router.delete('/:id', authenticate, notificationController.deleteNotification);
 
 module.exports = router;

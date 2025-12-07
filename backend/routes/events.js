@@ -1,27 +1,20 @@
-/**
- * Routes de gestion des événements
- */
-
 const express = require('express');
 const router = express.Router();
 const eventController = require('../controllers/eventController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { authenticate, authorize } = require('../middleware/auth');
 
 // Routes publiques
-router.get('/', eventController.getAllEvents);
-router.get('/:id', eventController.getEventById);
-router.get('/:id/participants', eventController.getEventParticipants);
+router.get('/public', eventController.getPublicEvents);
 
-// Routes protégées
-router.use(authMiddleware.requireAuth);
+// Routes authentifiées
+router.get('/', authenticate, eventController.getAllEvents);
+router.get('/my-events', authenticate, authorize('manager'), eventController.getMyEvents);
+router.get('/:id', authenticate, eventController.getEventById);
 
-// CRUD événements (Manager/Admin)
-router.post('/', authMiddleware.requireManagerOrAdmin, eventController.createEvent);
-router.put('/:id', authMiddleware.requireManagerOrAdmin, eventController.updateEvent);
-router.delete('/:id', authMiddleware.requireManagerOrAdmin, eventController.deleteEvent);
-
-// Gestion participants
-router.post('/:id/participants', eventController.addParticipant);
-router.delete('/:id/participants/:userId', eventController.removeParticipant);
+// Routes manager/admin
+router.post('/', authenticate, authorize('manager', 'admin'), eventController.createEvent);
+router.put('/:id', authenticate, authorize('manager', 'admin'), eventController.updateEvent);
+router.delete('/:id', authenticate, authorize('manager', 'admin'), eventController.deleteEvent);
+router.post('/:id/resources', authenticate, authorize('manager', 'admin'), eventController.addResourceToEvent);
 
 module.exports = router;

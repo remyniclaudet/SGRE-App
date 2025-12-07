@@ -1,3 +1,4 @@
+// frontend/src/pages/admin/DashboardAdmin.jsx
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -5,80 +6,47 @@ import {
   FaBuilding, 
   FaCalendarAlt, 
   FaChartBar,
-  FaUserShield,
-  FaHistory
+  FaUserPlus,
+  FaHistory,
+  FaCog
 } from 'react-icons/fa';
-import { getUsers } from '../api/users';
-import { getResources } from '../api/resources';
-import { getEvents } from '../api/events';
-import { getAuditLogs } from '../api/reports';
 
 const DashboardAdmin = () => {
   const [stats, setStats] = useState({
-    users: 0,
-    resources: 0,
-    events: 0,
-    reservations: 0
+    totalUsers: 0,
+    totalResources: 0,
+    totalEvents: 0,
+    activeReservations: 0
   });
-  const [recentUsers, setRecentUsers] = useState([]);
-  const [recentLogs, setRecentLogs] = useState([]);
+
+  const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      
-      // Récupérer les statistiques
-      const [usersRes, resourcesRes, eventsRes, logsRes] = await Promise.all([
-        getUsers(),
-        getResources(),
-        getEvents(),
-        getAuditLogs({ limit: 5 })
-      ]);
-
+    // Simuler le chargement des données
+    setTimeout(() => {
       setStats({
-        users: usersRes.count || 0,
-        resources: resourcesRes.count || 0,
-        events: eventsRes.count || 0,
-        reservations: 0 // À implémenter si besoin
+        totalUsers: 156,
+        totalResources: 42,
+        totalEvents: 28,
+        activeReservations: 89
       });
-
-      setRecentUsers(usersRes.users?.slice(0, 5) || []);
-      setRecentLogs(logsRes.logs || []);
-    } catch (error) {
-      console.error('Erreur lors du chargement du dashboard:', error);
-    } finally {
+      
+      setRecentActivity([
+        { id: 1, user: 'Manager 1', action: 'a créé une ressource', time: '10 min', type: 'resource' },
+        { id: 2, user: 'Client 5', action: 'a fait une réservation', time: '25 min', type: 'reservation' },
+        { id: 3, user: 'Admin', action: 'a ajouté un manager', time: '1 heure', type: 'user' },
+        { id: 4, user: 'Client 12', action: 'a annulé une réservation', time: '2 heures', type: 'reservation' },
+      ]);
+      
       setLoading(false);
-    }
-  };
-
-  const getRoleColor = (role) => {
-    switch (role) {
-      case 'ADMIN': return 'bg-red-100 text-red-800';
-      case 'MANAGER': return 'bg-blue-100 text-blue-800';
-      case 'CLIENT': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
+    }, 1000);
+  }, []);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-lg text-gray-600">Chargement...</div>
+        <div className="text-lg text-gray-600">Chargement du tableau de bord...</div>
       </div>
     );
   }
@@ -86,154 +54,154 @@ const DashboardAdmin = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Tableau de bord Administrateur</h1>
-        <p className="text-gray-600 mt-2">
-          Gérez les utilisateurs, les ressources et surveillez l'activité du système
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard Administrateur</h1>
+          <p className="text-gray-600 mt-2">
+            Vue d'ensemble complète du système
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Link to="/admin/settings" className="btn btn-outline flex items-center gap-2">
+            <FaCog />
+            Paramètres
+          </Link>
+          <Link to="/admin/users/new" className="btn btn-primary flex items-center gap-2">
+            <FaUserPlus />
+            Ajouter un manager
+          </Link>
+        </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Utilisateurs</p>
-              <p className="text-2xl font-bold mt-2">{stats.users}</p>
+        <div className="card bg-primary-50 border-primary-200">
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-primary-700">Utilisateurs</p>
+                <p className="text-3xl font-bold mt-2 text-primary-900">{stats.totalUsers}</p>
+                <p className="text-sm text-primary-600 mt-1">+5 ce mois</p>
+              </div>
+              <div className="p-3 bg-primary-100 rounded-lg">
+                <FaUsers className="text-2xl text-primary-600" />
+              </div>
             </div>
-            <div className="p-3 bg-primary-100 rounded-lg">
-              <FaUsers className="text-2xl text-primary-600" />
-            </div>
+            <Link to="/admin/users" className="inline-block mt-4 text-sm text-primary-600 hover:text-primary-700 font-medium">
+              Gérer les utilisateurs →
+            </Link>
           </div>
-          <Link to="/admin/users" className="inline-block mt-4 text-sm text-primary-600 hover:text-primary-700">
-            Voir tous →
-          </Link>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Ressources</p>
-              <p className="text-2xl font-bold mt-2">{stats.resources}</p>
+        <div className="card bg-blue-50 border-blue-200">
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-700">Ressources</p>
+                <p className="text-3xl font-bold mt-2 text-blue-900">{stats.totalResources}</p>
+                <p className="text-sm text-blue-600 mt-1">12 disponibles</p>
+              </div>
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <FaBuilding className="text-2xl text-blue-600" />
+              </div>
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <FaBuilding className="text-2xl text-blue-600" />
-            </div>
+            <Link to="/admin/resources" className="inline-block mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Gérer les ressources →
+            </Link>
           </div>
-          <Link to="/resources" className="inline-block mt-4 text-sm text-blue-600 hover:text-blue-700">
-            Voir toutes →
-          </Link>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Événements</p>
-              <p className="text-2xl font-bold mt-2">{stats.events}</p>
+        <div className="card bg-green-50 border-green-200">
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-700">Événements</p>
+                <p className="text-3xl font-bold mt-2 text-green-900">{stats.totalEvents}</p>
+                <p className="text-sm text-green-600 mt-1">5 à venir</p>
+              </div>
+              <div className="p-3 bg-green-100 rounded-lg">
+                <FaCalendarAlt className="text-2xl text-green-600" />
+              </div>
             </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <FaCalendarAlt className="text-2xl text-green-600" />
-            </div>
+            <Link to="/admin/events" className="inline-block mt-4 text-sm text-green-600 hover:text-green-700 font-medium">
+              Gérer les événements →
+            </Link>
           </div>
-          <Link to="/events" className="inline-block mt-4 text-sm text-green-600 hover:text-green-700">
-            Voir tous →
-          </Link>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Logs d'audit</p>
-              <p className="text-2xl font-bold mt-2">{recentLogs.length}</p>
+        <div className="card bg-purple-50 border-purple-200">
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-purple-700">Réservations actives</p>
+                <p className="text-3xl font-bold mt-2 text-purple-900">{stats.activeReservations}</p>
+                <p className="text-sm text-purple-600 mt-1">8 en attente</p>
+              </div>
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <FaChartBar className="text-2xl text-purple-600" />
+              </div>
             </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <FaHistory className="text-2xl text-purple-600" />
-            </div>
+            <Link to="/admin/reservations" className="inline-block mt-4 text-sm text-purple-600 hover:text-purple-700 font-medium">
+              Voir les réservations →
+            </Link>
           </div>
-          <Link to="/reports" className="inline-block mt-4 text-sm text-purple-600 hover:text-purple-700">
-            Voir les logs →
-          </Link>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="card p-6">
-        <h2 className="text-xl font-semibold mb-4">Actions rapides</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Link 
-            to="/admin/users/new" 
-            className="btn btn-primary flex items-center justify-center gap-2"
-          >
-            <FaUserShield />
-            Ajouter un utilisateur
-          </Link>
-          <Link 
-            to="/resources/new" 
-            className="btn btn-secondary flex items-center justify-center gap-2"
-          >
-            <FaBuilding />
-            Ajouter une ressource
-          </Link>
-          <Link 
-            to="/reports" 
-            className="btn bg-purple-600 text-white hover:bg-purple-700 flex items-center justify-center gap-2"
-          >
-            <FaChartBar />
-            Voir les rapports
-          </Link>
-        </div>
-      </div>
-
-      {/* Recent Users */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Utilisateurs récents</h2>
-          <div className="space-y-4">
-            {recentUsers.map(user => (
-              <div key={user.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">{user.fullName}</p>
-                  <p className="text-sm text-gray-600">{user.email}</p>
-                </div>
-                <span className={`badge ${getRoleColor(user.role)}`}>
-                  {user.role}
-                </span>
-              </div>
-            ))}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card">
+          <div className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Actions rapides</h3>
+            <div className="space-y-3">
+              <Link to="/admin/users/new" className="btn btn-outline w-full flex items-center justify-between">
+                <span>Ajouter un manager</span>
+                <FaUserPlus />
+              </Link>
+              <Link to="/admin/resources/new" className="btn btn-outline w-full flex items-center justify-between">
+                <span>Créer une ressource</span>
+                <FaBuilding />
+              </Link>
+              <Link to="/admin/events/new" className="btn btn-outline w-full flex items-center justify-between">
+                <span>Planifier un événement</span>
+                <FaCalendarAlt />
+              </Link>
+            </div>
           </div>
-          <Link to="/admin/users" className="inline-block mt-4 text-sm text-primary-600 hover:text-primary-700">
-            Voir tous les utilisateurs →
-          </Link>
         </div>
 
         {/* Recent Activity */}
-        <div className="card p-6">
-          <h2 className="text-xl font-semibold mb-4">Activité récente</h2>
-          <div className="space-y-4">
-            {recentLogs.map(log => (
-              <div key={log.id} className="p-3 bg-gray-50 rounded-lg">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">{log.action}</p>
-                    <p className="text-sm text-gray-600">
-                      {log.object_type} #{log.object_id}
-                    </p>
+        <div className="card md:col-span-2">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-semibold">Activité récente</h3>
+              <Link to="/admin/audit" className="text-primary-600 hover:text-primary-700 text-sm flex items-center gap-2">
+                <FaHistory />
+                Voir tous les logs
+              </Link>
+            </div>
+            <div className="space-y-4">
+              {recentActivity.map((activity) => (
+                <div key={activity.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded ${
+                      activity.type === 'user' ? 'bg-blue-100' :
+                      activity.type === 'resource' ? 'bg-green-100' : 'bg-purple-100'
+                    }`}>
+                      {activity.type === 'user' && <FaUsers className="text-blue-600" />}
+                      {activity.type === 'resource' && <FaBuilding className="text-green-600" />}
+                      {activity.type === 'reservation' && <FaCalendarAlt className="text-purple-600" />}
+                    </div>
+                    <div>
+                      <p className="font-medium">{activity.user}</p>
+                      <p className="text-sm text-gray-600">{activity.action}</p>
+                    </div>
                   </div>
-                  <span className="text-xs text-gray-500">
-                    {formatDate(log.created_at)}
-                  </span>
+                  <span className="text-sm text-gray-500">{activity.time}</span>
                 </div>
-                {log.user_name && (
-                  <p className="text-sm mt-2">
-                    Par: {log.user_name} ({log.user_email})
-                  </p>
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-          <Link to="/reports" className="inline-block mt-4 text-sm text-primary-600 hover:text-primary-700">
-            Voir toute l'activité →
-          </Link>
         </div>
       </div>
     </div>

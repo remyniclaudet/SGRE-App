@@ -1,116 +1,68 @@
-/**
- * Contrôleur de gestion des notifications
- */
+const Notification = require('../models/Notification');
 
-const notificationModel = require('../models/notificationModel');
-
-/**
- * Récupérer les notifications de l'utilisateur
- */
-exports.getUserNotifications = async (req, res) => {
-  try {
-    const { read } = req.query;
-    const userId = req.user.id;
-
-    const notifications = await notificationModel.getUserNotifications(userId, read === 'true');
-
-    res.json({
-      success: true,
-      count: notifications.length,
-      unread_count: notifications.filter(n => !n.read_at).length,
-      notifications
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération des notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
+exports.getNotifications = async (req, res) => {
+    try {
+        const notifications = await Notification.findByUser(req.userId);
+        res.json({
+            success: true,
+            notifications
+        });
+    } catch (error) {
+        console.error('Get notifications error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
 };
 
-/**
- * Marquer une notification comme lue
- */
 exports.markAsRead = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
-
-    // Vérifier si la notification appartient à l'utilisateur
-    const notification = await notificationModel.getNotificationById(id);
-    if (!notification || notification.user_id !== userId) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notification non trouvée'
-      });
+    try {
+        const { id } = req.params;
+        await Notification.markAsRead(id);
+        res.json({
+            success: true,
+            message: 'Notification marquée comme lue'
+        });
+    } catch (error) {
+        console.error('Mark as read error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    await notificationModel.markAsRead(id);
-
-    res.json({
-      success: true,
-      message: 'Notification marquée comme lue'
-    });
-  } catch (error) {
-    console.error('Erreur lors du marquage de la notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
 };
 
-/**
- * Marquer toutes les notifications comme lues
- */
 exports.markAllAsRead = async (req, res) => {
-  try {
-    const userId = req.user.id;
-
-    await notificationModel.markAllAsRead(userId);
-
-    res.json({
-      success: true,
-      message: 'Toutes les notifications marquées comme lues'
-    });
-  } catch (error) {
-    console.error('Erreur lors du marquage des notifications:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
+    try {
+        await Notification.markAllAsRead(req.userId);
+        res.json({
+            success: true,
+            message: 'Toutes les notifications marquées comme lues'
+        });
+    } catch (error) {
+        console.error('Mark all as read error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
 };
 
-/**
- * Supprimer une notification
- */
-exports.deleteNotification = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
-
-    // Vérifier si la notification appartient à l'utilisateur
-    const notification = await notificationModel.getNotificationById(id);
-    if (!notification || notification.user_id !== userId) {
-      return res.status(404).json({
-        success: false,
-        message: 'Notification non trouvée'
-      });
+exports.getUnreadCount = async (req, res) => {
+    try {
+        const count = await Notification.getUnreadCount(req.userId);
+        res.json({
+            success: true,
+            count
+        });
+    } catch (error) {
+        console.error('Get unread count error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
+};
 
-    await notificationModel.deleteNotification(id);
-
-    res.json({
-      success: true,
-      message: 'Notification supprimée'
-    });
-  } catch (error) {
-    console.error('Erreur lors de la suppression de la notification:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
+exports.deleteNotification = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await Notification.delete(id);
+        res.json({
+            success: true,
+            message: 'Notification supprimée'
+        });
+    } catch (error) {
+        console.error('Delete notification error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
 };

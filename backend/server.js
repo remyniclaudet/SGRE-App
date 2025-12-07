@@ -1,81 +1,48 @@
-/**
- * Serveur principal SGRE-App
- * Point d'entrée de l'application backend
- */
-
 const express = require('express');
 const cors = require('cors');
-const morgan = require('morgan');
-const fileUpload = require('express-fileupload');
-const path = require('path');
+const bodyParser = require('body-parser');
 require('dotenv').config();
 
-// Import des routes
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const resourceRoutes = require('./routes/resources');
 const eventRoutes = require('./routes/events');
 const reservationRoutes = require('./routes/reservations');
 const notificationRoutes = require('./routes/notifications');
-const reportRoutes = require('./routes/reports');
+const configRoutes = require('./routes/config');
+const categoryRoutes = require('./routes/categories');
 
-const app = express();
-const PORT = process.env.PORT || 4000;
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/resources', resourceRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/reservations', reservationRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/categories', categoryRoutes);
 
-// Middlewares
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true
-}));
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(fileUpload({
-  createParentPath: true,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB max
-}));
-
-// Dossier pour les fichiers uploadés
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Routes API
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/resources', resourceRoutes);
-app.use('/api/v1/events', eventRoutes);
-app.use('/api/v1/reservations', reservationRoutes);
-app.use('/api/v1/notifications', notificationRoutes);
-app.use('/api/v1/reports', reportRoutes);
-
-// Route de test
-app.get('/api/v1/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'SGRE API is running',
-    timestamp: new Date().toISOString()
-  });
+// Basic route
+app.get('/', (req, res) => {
+    res.json({ message: 'Bienvenue sur l\'API de gestion des ressources et événements' });
 });
 
-// Catch-all 404 handler (mounted at default '/' so no path-to-regexp '*' is used)
-app.use((req, res) => {
-  res.status(404).json({ message: 'Not found' });
-});
-
-// Gestion globale des erreurs
+// Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+    console.error(err.stack);
+    res.status(500).json({ message: 'Quelque chose s\'est mal passé!' });
 });
 
-// Démarrer le serveur
+const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
-  console.log(`✅ Serveur démarré sur le port ${PORT}`);
-  console.log(`📚 API disponible sur http://localhost:${PORT}/api/v1`);
-  console.log(`🌐 Frontend: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+    console.log(`Serveur démarré sur le port ${PORT}`);
 });
-
-module.exports = app;

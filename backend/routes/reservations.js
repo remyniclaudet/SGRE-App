@@ -1,30 +1,17 @@
-/**
- * Routes de gestion des réservations
- */
-
 const express = require('express');
 const router = express.Router();
 const reservationController = require('../controllers/reservationController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { authenticate, authorize } = require('../middleware/auth');
 
-// Toutes les routes nécessitent une authentification
-router.use(authMiddleware.requireAuth);
+// Routes client
+router.get('/my-reservations', authenticate, reservationController.getMyReservations);
+router.post('/', authenticate, reservationController.createReservation);
+router.put('/:id/cancel', authenticate, reservationController.cancelReservation);
 
-// Récupérer les réservations
-router.get('/', reservationController.getAllReservations);
-router.get('/user/:userId', reservationController.getUserReservations);
-router.get('/:id', reservationController.getReservationById);
-
-// Créer une réservation
-router.post('/', reservationController.createReservation);
-
-// Mettre à jour une réservation (seulement propriétaire ou manager/admin)
-router.put('/:id', reservationController.updateReservation);
-
-// Gestion du statut (Manager/Admin seulement)
-router.patch('/:id/status', authMiddleware.requireManagerOrAdmin, reservationController.changeReservationStatus);
-
-// Annuler une réservation
-router.delete('/:id', reservationController.cancelReservation);
+// Routes manager/admin
+router.get('/', authenticate, authorize('manager', 'admin'), reservationController.getAllReservations);
+router.get('/pending', authenticate, authorize('manager', 'admin'), reservationController.getPendingReservations);
+router.put('/:id/status', authenticate, authorize('manager', 'admin'), reservationController.updateReservationStatus);
+router.get('/:id', authenticate, reservationController.getReservationById);
 
 module.exports = router;

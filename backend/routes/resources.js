@@ -1,25 +1,21 @@
-/**
- * Routes de gestion des ressources
- */
-
 const express = require('express');
 const router = express.Router();
 const resourceController = require('../controllers/resourceController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { authenticate, authorize } = require('../middleware/auth');
 
 // Routes publiques
-router.get('/', resourceController.getAllResources);
-router.get('/:id', resourceController.getResourceById);
+router.get('/public', resourceController.getPublicResources);
+router.get('/public/:id', resourceController.getPublicResourceById);
 
-// Routes protégées
-router.use(authMiddleware.requireAuth);
+// Routes authentifiées
+router.get('/', authenticate, resourceController.getAllResources);
+router.get('/available', authenticate, resourceController.getAvailableResources);
+router.get('/stats', authenticate, resourceController.getResourceStats);
 
-// Création/modification suppression (Manager/Admin seulement)
-router.post('/', authMiddleware.requireManagerOrAdmin, resourceController.createResource);
-router.put('/:id', authMiddleware.requireManagerOrAdmin, resourceController.updateResource);
-router.delete('/:id', authMiddleware.requireManagerOrAdmin, resourceController.deleteResource);
-
-// Vérification de disponibilité
-router.get('/:id/availability', resourceController.checkAvailability);
+// Routes manager/admin
+router.post('/', authenticate, authorize('manager', 'admin'), resourceController.createResource);
+router.get('/:id', authenticate, resourceController.getResourceById);
+router.put('/:id', authenticate, authorize('manager', 'admin'), resourceController.updateResource);
+router.delete('/:id', authenticate, authorize('manager', 'admin'), resourceController.deleteResource);
 
 module.exports = router;

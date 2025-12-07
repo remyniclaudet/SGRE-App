@@ -1,236 +1,96 @@
-/**
- * Contrôleur de gestion des utilisateurs
- * Accessible uniquement par les administrateurs
- */
+const User = require('../models/User');
 
-const userModel = require('../models/userModel');
-const auditModel = require('../models/auditModel');
-
-/**
- * Récupérer tous les utilisateurs
- */
 exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await userModel.getAllUsers();
-    
-    // Ne pas renvoyer les mots de passe
-    const sanitizedUsers = users.map(user => ({
-      id: user.id,
-      email: user.email,
-      fullName: user.full_name,
-      role: user.role,
-      isActive: user.is_active,
-      createdAt: user.created_at
-    }));
-
-    res.json({
-      success: true,
-      count: sanitizedUsers.length,
-      users: sanitizedUsers
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération des utilisateurs:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
-};
-
-/**
- * Récupérer un utilisateur par ID
- */
-exports.getUserById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await userModel.getUserById(id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
+    try {
+        const users = await User.findAll();
+        res.json({
+            success: true,
+            users
+        });
+    } catch (error) {
+        console.error('Get users error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    // Ne pas renvoyer le mot de passe
-    const sanitizedUser = {
-      id: user.id,
-      email: user.email,
-      fullName: user.full_name,
-      role: user.role,
-      isActive: user.is_active,
-      createdAt: user.created_at
-    };
-
-    res.json({
-      success: true,
-      user: sanitizedUser
-    });
-  } catch (error) {
-    console.error('Erreur lors de la récupération de l\'utilisateur:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
 };
 
-/**
- * Mettre à jour un utilisateur
- */
+exports.createUser = async (req, res) => {
+    try {
+        const { name, email, password, role } = req.body;
+        
+        // Vérifier si l'utilisateur existe déjà
+        const existingUser = await User.findByEmail(email);
+        if (existingUser) {
+            return res.status(400).json({ message: 'Cet email est déjà utilisé' });
+        }
+        
+        const userId = await User.create({
+            name,
+            email,
+            password,
+            role: role || 'manager'
+        });
+        
+        res.json({
+            success: true,
+            message: 'Utilisateur créé avec succès',
+            userId
+        });
+        
+    } catch (error) {
+        console.error('Create user error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
+    }
+};
+
 exports.updateUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    // Vérifier si l'utilisateur existe
-    const existingUser = await userModel.getUserById(id);
-    if (!existingUser) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
+    try {
+        const { id } = req.params;
+        const { name, email, role } = req.body;
+        
+        await User.update(id, { name, email, role });
+        
+        res.json({
+            success: true,
+            message: 'Utilisateur mis à jour avec succès'
+        });
+        
+    } catch (error) {
+        console.error('Update user error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    // Mettre à jour l'utilisateur
-    await userModel.updateUser(id, updateData);
-
-    // Log d'audit
-    await auditModel.logAction({
-      user_id: req.user.id,
-      action: 'UPDATE_USER',
-      object_type: 'USER',
-      object_id: id,
-      detail: updateData
-    });
-
-    // Récupérer l'utilisateur mis à jour
-    const updatedUser = await userModel.getUserById(id);
-
-    res.json({
-      success: true,
-      message: 'Utilisateur mis à jour avec succès',
-      user: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        fullName: updatedUser.full_name,
-        role: updatedUser.role,
-        isActive: updatedUser.is_active
-      }
-    });
-  } catch (error) {
-    console.error('Erreur lors de la mise à jour de l\'utilisateur:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur lors de la mise à jour'
-    });
-  }
 };
 
-/**
- * Changer le rôle d'un utilisateur
- */
-exports.changeUserRole = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role } = req.body;
-
-    // Validation du rôle
-    const validRoles = ['ADMIN', 'MANAGER', 'CLIENT'];
-    if (!role || !validRoles.includes(role)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Rôle invalide. Rôles valides: ADMIN, MANAGER, CLIENT'
-      });
+exports.deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        // Ne pas permettre la suppression de soi-même
+        if (parseInt(id) === req.userId) {
+            return res.status(400).json({ message: 'Vous ne pouvez pas supprimer votre propre compte' });
+        }
+        
+        await User.delete(id);
+        
+        res.json({
+            success: true,
+            message: 'Utilisateur supprimé avec succès'
+        });
+        
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    // Vérifier si l'utilisateur existe
-    const user = await userModel.getUserById(id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
-    }
-
-    // Mettre à jour le rôle
-    await userModel.updateUser(id, { role });
-
-    // Log d'audit
-    await auditModel.logAction({
-      user_id: req.user.id,
-      action: 'CHANGE_ROLE',
-      object_type: 'USER',
-      object_id: id,
-      detail: { from: user.role, to: role }
-    });
-
-    res.json({
-      success: true,
-      message: `Rôle mis à jour avec succès: ${role}`,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        role: role,
-        isActive: user.is_active
-      }
-    });
-  } catch (error) {
-    console.error('Erreur lors du changement de rôle:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
 };
 
-/**
- * Activer/Désactiver un utilisateur
- */
-exports.toggleUserStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { isActive } = req.body;
-
-    // Vérifier si l'utilisateur existe
-    const user = await userModel.getUserById(id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'Utilisateur non trouvé'
-      });
+exports.getUserStats = async (req, res) => {
+    try {
+        const stats = await User.getStats();
+        res.json({
+            success: true,
+            stats
+        });
+    } catch (error) {
+        console.error('Get user stats error:', error);
+        res.status(500).json({ message: 'Erreur serveur' });
     }
-
-    // Mettre à jour le statut
-    const newStatus = isActive ? 1 : 0;
-    await userModel.updateUser(id, { is_active: newStatus });
-
-    // Log d'audit
-    await auditModel.logAction({
-      user_id: req.user.id,
-      action: newStatus ? 'ACTIVATE_USER' : 'DEACTIVATE_USER',
-      object_type: 'USER',
-      object_id: id,
-      detail: { previousStatus: user.is_active, newStatus }
-    });
-
-    res.json({
-      success: true,
-      message: newStatus ? 'Utilisateur activé' : 'Utilisateur désactivé',
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.full_name,
-        role: user.role,
-        isActive: newStatus
-      }
-    });
-  } catch (error) {
-    console.error('Erreur lors du changement de statut:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Erreur serveur'
-    });
-  }
 };

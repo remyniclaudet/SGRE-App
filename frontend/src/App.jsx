@@ -1,124 +1,78 @@
-import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import PrivateRoute from './components/PrivateRoute';
+import PublicLayout from './layouts/PublicLayout';
+import AdminLayout from './layouts/AdminLayout';
+import ManagerLayout from './layouts/ManagerLayout';
+import ClientLayout from './layouts/ClientLayout';
 
-// Pages
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import DashboardAdmin from './pages/DashboardAdmin';
-import DashboardManager from './pages/DashboardManager';
-import DashboardClient from './pages/DashboardClient';
-import Resources from './pages/Resources';
-import ResourceForm from './pages/ResourceForm';
-import Events from './pages/Events';
-import EventForm from './pages/EventForm';
-import Reservations from './pages/Reservations';
-import Notifications from './pages/Notifications';
-import Profile from './pages/Profile';
-import Reports from './pages/Reports';
+// Pages publiques
+import Home from './pages/public/Home';
+import About from './pages/public/About';
+import Contact from './pages/public/Contact';
+import Login from './pages/public/Login';
+import Register from './pages/public/Register';
+
+// Pages admin
+import AdminDashboard from './pages/admin/Dashboard';
+import AdminUsers from './pages/admin/Users';
+import AdminResources from './pages/admin/Resources';
+import AdminEvents from './pages/admin/Events';
+import AdminSettings from './pages/admin/Settings.jsx';
+
+// Pages manager
+import ManagerDashboard from './pages/manager/Dashboard';
+import ManagerResources from './pages/manager/Resources';
+import ManagerEvents from './pages/manager/Events';
+import ManagerReservations from './pages/manager/Reservations';
+
+// Pages client
+import ClientDashboard from './pages/client/Dashboard';
+import ClientCatalog from './pages/client/Catalog';
+import ClientReservations from './pages/client/Reservations';
+import ClientProfile from './pages/client/Profile';
 
 function App() {
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-
   return (
     <Router>
       <AuthProvider>
-        <div className="min-h-screen flex flex-col">
-          <Header notifications={notifications} unreadCount={unreadCount} />
-          <main className="flex-grow">
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              
-              {/* Protected routes by role */}
-              <Route path="/admin/*" element={
-                <PrivateRoute role="ADMIN">
-                  <DashboardAdmin />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/manager/*" element={
-                <PrivateRoute role="MANAGER">
-                  <DashboardManager />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/client/*" element={
-                <PrivateRoute role="CLIENT">
-                  <DashboardClient />
-                </PrivateRoute>
-              } />
-              
-              {/* Common protected routes */}
-              <Route path="/resources" element={
-                <PrivateRoute>
-                  <Resources />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/resources/new" element={
-                <PrivateRoute roles={['MANAGER', 'ADMIN']}>
-                  <ResourceForm />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/resources/:id/edit" element={
-                <PrivateRoute roles={['MANAGER', 'ADMIN']}>
-                  <ResourceForm />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/events" element={<Events />} />
-              
-              <Route path="/events/new" element={
-                <PrivateRoute roles={['MANAGER', 'ADMIN']}>
-                  <EventForm />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/events/:id/edit" element={
-                <PrivateRoute roles={['MANAGER', 'ADMIN']}>
-                  <EventForm />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/reservations" element={
-                <PrivateRoute>
-                  <Reservations />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/notifications" element={
-                <PrivateRoute>
-                  <Notifications />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/profile" element={
-                <PrivateRoute>
-                  <Profile />
-                </PrivateRoute>
-              } />
-              
-              <Route path="/reports" element={
-                <PrivateRoute roles={['ADMIN', 'MANAGER']}>
-                  <Reports />
-                </PrivateRoute>
-              } />
-              
-              {/* Fallback route */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
+        <Routes>
+          {/* Routes publiques */}
+          <Route path="/" element={<PublicLayout />}>
+            <Route index element={<Home />} />
+            <Route path="about" element={<About />} />
+            <Route path="contact" element={<Contact />} />
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
+          </Route>
+
+          {/* Routes admin */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="resources" element={<AdminResources />} />
+            <Route path="events" element={<AdminEvents />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
+
+          {/* Routes manager */}
+          <Route path="/manager" element={<ManagerLayout />}>
+            <Route index element={<ManagerDashboard />} />
+            <Route path="resources" element={<ManagerResources />} />
+            <Route path="events" element={<ManagerEvents />} />
+            <Route path="reservations" element={<ManagerReservations />} />
+          </Route>
+
+          {/* Routes client */}
+          <Route path="/client" element={<ClientLayout />}>
+            <Route index element={<ClientDashboard />} />
+            <Route path="catalog" element={<ClientCatalog />} />
+            <Route path="reservations" element={<ClientReservations />} />
+            <Route path="profile" element={<ClientProfile />} />
+          </Route>
+
+          {/* Redirections par défaut */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
       </AuthProvider>
     </Router>
   );

@@ -1,7 +1,7 @@
+// frontend/src/pages/public/Login.jsx
 import React, { useState, useContext } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
-import { login } from '../api/auth';
+import { useNavigate, Link } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -10,7 +10,7 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { setUser } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -26,113 +26,105 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await login(formData);
+      const user = await login(formData);
       
-      if (response.success) {
-        // Stocker l'utilisateur dans le contexte et localStorage
-        setUser(response.user);
-        localStorage.setItem('user', JSON.stringify(response.user));
-        
-        // Rediriger vers le dashboard approprié
-        switch (response.user.role) {
-          case 'ADMIN':
-            navigate('/admin');
-            break;
-          case 'MANAGER':
-            navigate('/manager');
-            break;
-          case 'CLIENT':
-            navigate('/client');
-            break;
-          default:
-            navigate('/');
-        }
+      // Redirection basée sur le rôle
+      switch (user.role) {
+        case 'ADMIN':
+          navigate('/admin');
+          break;
+        case 'MANAGER':
+          navigate('/manager');
+          break;
+        case 'CLIENT':
+          navigate('/client');
+          break;
+        default:
+          navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la connexion');
+      setError(err.message || 'Email ou mot de passe incorrect');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Connexion à votre compte
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Ou{' '}
-            <Link to="/register" className="font-medium text-primary-600 hover:text-primary-500">
-              créez un nouveau compte
-            </Link>
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+      <div className="max-w-md w-full">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">SGRE-App</h1>
+          <p className="text-gray-600">Système de Gestion des Ressources et Événements</p>
         </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+
+        <div className="card p-8">
+          <h2 className="text-2xl font-bold text-center mb-8">Connexion</h2>
+          
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
               {error}
             </div>
           )}
-          
-          <div className="rounded-md shadow-sm -space-y-px">
+
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="sr-only">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Adresse email
               </label>
               <input
-                id="email"
-                name="email"
                 type="email"
-                autoComplete="email"
-                required
+                name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Adresse email"
+                required
+                className="input"
+                placeholder="email@exemple.com"
               />
             </div>
+
             <div>
-              <label htmlFor="password" className="sr-only">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Mot de passe
               </label>
               <input
-                id="password"
-                name="password"
                 type="password"
-                autoComplete="current-password"
-                required
+                name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm"
-                placeholder="Mot de passe"
+                required
+                className="input"
+                placeholder="••••••••"
               />
             </div>
-          </div>
 
-          <div>
             <button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+              className="w-full btn btn-primary py-3 text-lg"
             >
               {loading ? 'Connexion en cours...' : 'Se connecter'}
             </button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <p className="text-center text-gray-600">
+              Pas encore de compte ?{' '}
+              <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+                S'inscrire
+              </Link>
+            </p>
           </div>
 
-          <div className="text-center">
-            <p className="text-sm text-gray-600">
-              Comptes de démonstration:
-            </p>
-            <div className="mt-2 text-xs text-gray-500 space-y-1">
-              <p>Admin: admin@sgre.test / admin123</p>
-              <p>Manager: manager@sgre.test / manager123</p>
-              <p>Client: client1@sgre.test / client123</p>
+          {/* Comptes de test */}
+          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm font-medium text-gray-700 mb-2">Comptes de démonstration :</p>
+            <div className="text-xs text-gray-600 space-y-1">
+              <p>👑 <strong>Admin</strong>: admin@sgre.test / admin123</p>
+              <p>👨‍💼 <strong>Manager</strong>: manager1@sgre.test / manager123</p>
+              <p>👤 <strong>Client</strong>: client1@sgre.test / client123</p>
             </div>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
