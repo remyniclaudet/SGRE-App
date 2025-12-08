@@ -173,17 +173,16 @@ const ResourceDetails = () => {
           </div>
           
           <div className="md:text-right">
-            <button
-              onClick={() => setShowReservationModal(true)}
-              disabled={!isAvailable}
-              className={`px-6 py-3 rounded-lg font-semibold ${
-                isAvailable
-                  ? 'bg-primary-600 text-white hover:bg-primary-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              {isAvailable ? 'Réserver maintenant' : 'Indisponible'}
-            </button>
+           <Link
+  to={`/client/reservations/new/${resource.id}`}
+  className={`px-6 py-3 rounded-lg font-semibold inline-block ${
+    isAvailable
+      ? 'bg-primary-600 text-white hover:bg-primary-700'
+      : 'bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none'
+  }`}
+>
+  {isAvailable ? 'Réserver maintenant' : 'Indisponible'}
+</Link>
           </div>
         </div>
       </div>

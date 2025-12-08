@@ -5,10 +5,6 @@ import AdminLayout from './layouts/AdminLayout';
 import ManagerLayout from './layouts/ManagerLayout';
 import ClientLayout from './layouts/ClientLayout';
 
-import NewReservation from './pages/client/NewReservation';
-import ResourceDetails from './pages/client/ResourceDetails';
-
-
 // Pages publiques
 import Home from './pages/public/Home';
 import About from './pages/public/About';
@@ -21,7 +17,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AdminUsers from './pages/admin/Users';
 import AdminResources from './pages/admin/Resources';
 import AdminEvents from './pages/admin/Events';
-import AdminSettings from './pages/admin/Settings.jsx';
+import AdminSettings from './pages/admin/Settings';
 
 // Pages manager
 import ManagerDashboard from './pages/manager/Dashboard';
@@ -34,6 +30,8 @@ import ClientDashboard from './pages/client/Dashboard';
 import ClientCatalog from './pages/client/Catalog';
 import ClientReservations from './pages/client/Reservations';
 import ClientProfile from './pages/client/Profile';
+import NewReservation from './pages/client/NewReservation';
+import ResourceDetails from './pages/client/ResourceDetails';
 
 function App() {
   return (
@@ -70,11 +68,11 @@ function App() {
           <Route path="/client" element={<ClientLayout />}>
             <Route index element={<ClientDashboard />} />
             <Route path="catalog" element={<ClientCatalog />} />
-            <Route path="reservations" element={<ClientReservations />} />
-            <Route path="profile" element={<ClientProfile />} />
             <Route path="catalog/:id" element={<ResourceDetails />} />
+            <Route path="reservations" element={<ClientReservations />} />
             <Route path="reservations/new" element={<NewReservation />} />
             <Route path="reservations/new/:id" element={<NewReservation />} />
+            <Route path="profile" element={<ClientProfile />} />
           </Route>
 
           {/* Redirections par défaut */}

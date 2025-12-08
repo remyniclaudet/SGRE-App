@@ -50,6 +50,13 @@ class User {
         `);
         return rows;
     }
+
+    static async getManagers() {
+    const [rows] = await pool.query(
+        'SELECT id, name, email FROM users WHERE role = "manager"'
+    );
+    return rows;
+}
 }
 
 module.exports = User;

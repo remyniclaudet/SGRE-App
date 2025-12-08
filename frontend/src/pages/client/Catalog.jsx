@@ -220,12 +220,12 @@ const ClientCatalog = () => {
               </div>
 
               <div className="flex space-x-3">
-                <Link
-                  to={`/client/reservations/new?resource=${resource.id}`}
-                  className="btn-primary flex-1 text-center"
-                >
-                  Réserver
-                </Link>
+               <Link
+  to={`/client/reservations/new/${resource.id}`}
+  className="btn-primary flex-1 text-center"
+>
+  Réserver
+</Link>
                 <Link
                   to={`/client/catalog/${resource.id}`}
                   className="btn-secondary flex items-center justify-center space-x-2"

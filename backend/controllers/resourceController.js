@@ -166,3 +166,53 @@ exports.getResourceStats = async (req, res) => {
         res.status(500).json({ message: 'Erreur serveur' });
     }
 };
+
+exports.checkAvailability = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { start_date, end_date } = req.query;
+        
+        if (!start_date || !end_date) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Les dates de début et de fin sont requises' 
+            });
+        }
+        
+        const resource = await Resource.findById(id);
+        if (!resource || resource.status !== 'available') {
+            return res.json({
+                success: false,
+                available: false,
+                message: 'Ressource non disponible'
+            });
+        }
+        
+        // Vérifier les réservations existantes
+        const reservations = await Reservation.findByResource(id);
+        const startDate = new Date(start_date);
+        const endDate = new Date(end_date);
+        
+        const hasConflict = reservations.some(reservation => {
+            if (reservation.status !== 'confirmed') return false;
+            
+            const resStart = new Date(reservation.start_date);
+            const resEnd = new Date(reservation.end_date);
+            
+            return (startDate < resEnd && endDate > resStart);
+        });
+        
+        res.json({
+            success: true,
+            available: !hasConflict,
+            message: hasConflict ? 'Ressource déjà réservée pour cette période' : 'Disponible'
+        });
+        
+    } catch (error) {
+        console.error('Check availability error:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Erreur serveur lors de la vérification de disponibilité' 
+        });
+    }
+};

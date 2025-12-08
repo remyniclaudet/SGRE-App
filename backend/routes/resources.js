@@ -11,11 +11,14 @@ router.get('/public/:id', resourceController.getPublicResourceById);
 router.get('/', authenticate, resourceController.getAllResources);
 router.get('/available', authenticate, resourceController.getAvailableResources);
 router.get('/stats', authenticate, resourceController.getResourceStats);
+router.get('/:id', authenticate, resourceController.getResourceById);
 
 // Routes manager/admin
 router.post('/', authenticate, authorize('manager', 'admin'), resourceController.createResource);
-router.get('/:id', authenticate, resourceController.getResourceById);
 router.put('/:id', authenticate, authorize('manager', 'admin'), resourceController.updateResource);
 router.delete('/:id', authenticate, authorize('manager', 'admin'), resourceController.deleteResource);
+
+// Route pour vérifier la disponibilité
+router.get('/:id/availability', authenticate, resourceController.checkAvailability);
 
 module.exports = router;
